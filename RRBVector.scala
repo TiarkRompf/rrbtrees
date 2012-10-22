@@ -9,9 +9,11 @@ import scala.collection.generic._
 import scala.collection.immutable.{IndexedSeq,_}
 import scala.collection.mutable.Builder
 
+import java.lang.Math.{max => mmax, min => mmin}
+
+
 // TODO: 
 //  - get rid of for loops (replace with while loops)
-//  - replace math.max with java.lang.Math.max
 
 
 // companion object
@@ -207,7 +209,7 @@ extends /*AbstractSeq[A]
       nvec.root=if((a.vHw==Width)&&(b.vHw==Width)&&(a.vSize+b.vSize<=Width))
         tnca.asInstanceOf[Ara](1)
       else
-        setSizes(tnca,math.max(a.vHw,b.vHw))
+        setSizes(tnca,mmax(a.vHw,b.vHw))
       nvec.vSize=a.vSize+b.vSize
       nvec.vHw=findhw(nvec.root) //TR: can we do without the findhw?
       nvec
@@ -422,7 +424,7 @@ extends /*AbstractSeq[A]
       // Found a short one so redistribute over following ones
       var el=szs(ix) // current size <= MinWidth
       do {
-        val msz = math.min(el+szs(ix+1), Width)
+        val msz = mmin(el+szs(ix+1), Width)
         szs(ix) = msz
         el=el+szs(ix+1)-msz
 
