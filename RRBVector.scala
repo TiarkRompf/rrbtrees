@@ -24,6 +24,10 @@ object Vector extends SeqFactory[Vector] {
   private[rrbvector] val NIL = new Vector[Nothing](null, 0, 0)
   @inline override def empty[A]: Vector[A] = NIL
   
+
+  // zero element vector
+  def apply() = NIL
+
   // create a single element vector
   def apply[A](elem: A): Vector[A] = {
     val data = new Array[AnyRef](1)
@@ -228,6 +232,18 @@ extends /*AbstractSeq[A]
   }
 
 
+  // patch: split + concat
+
+  override def patch[B >: A, That](from: Int, patch: GenSeq[B], replaced: Int)(implicit bf: CanBuildFrom[Vector[A], B, That]): That = {
+    // just ignore bf
+    val insert = patch.nonEmpty
+    val delete = replaced != 0
+    if (insert || delete) {
+      val prefix = take(from)
+      val rest = drop(from+replaced)
+      ((prefix ++ patch).asInstanceOf[Vector[B]] ++ rest).asInstanceOf[That]
+    } else this.asInstanceOf[That]
+  }
 
 
   // #### concat implementation ####
