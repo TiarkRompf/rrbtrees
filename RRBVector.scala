@@ -11,7 +11,6 @@ import scala.collection.mutable.Builder
 
 // TODO: 
 //  - get rid of for loops (replace with while loops)
-//  - get rid of for tuple returns (store temp val in Vector object)
 //  - replace math.max with java.lang.Math.max
 
 
@@ -201,9 +200,10 @@ extends /*AbstractSeq[A]
     if (a.vSize == 0) b
     else if (b.vSize == 0) a
     else {
-      val tnca=concatSubTree(a.root,a.vHw,b.root,b.vHw,true)
       // create new vector 
       val nvec=new Vector[U]
+      // vSize and vHw fields left uninitialized
+      val tnca=nvec.concatSubTree(a.root,a.vHw,b.root,b.vHw,true)
       nvec.root=if((a.vHw==Width)&&(b.vHw==Width)&&(a.vSize+b.vSize<=Width))
         tnca.asInstanceOf[Ara](1)
       else
@@ -346,7 +346,8 @@ extends /*AbstractSeq[A]
     val all = araNewJoin(al,ac,ar)
   
     // shuffle slot sizes to fit invariant
-    val (szs,slen)=shuffle(all,hw)
+    val szs = shuffle(all,hw)
+    val slen = this.vSize // use object field to transport 2nd return value
   
     //println("shuffle: "+hw+ " " + (all map { (x:AnyRef) => x match {case a: Array[AnyRef] => a.mkString("{,",",","}") }} mkString))//TR
     //println("szs: "+szs.mkString)//TR
@@ -384,7 +385,7 @@ extends /*AbstractSeq[A]
   // while if the total number of slots at the level are as great as 2w 
   // then still only Extra can be small 
 
-  private def shuffle(all:Ara,hw:Int): (Array[Int],Int) = {
+  private def shuffle(all:Ara,hw:Int): Array[Int] = { // (Array[Int],Int) <--- 2nd return value transported via this.vSize
     val alen=all.length
     val szs=new Array[Int](alen)
 
@@ -436,7 +437,9 @@ extends /*AbstractSeq[A]
       nalen-=1
     }
     
-    (szs,nalen)
+    //(szs,nalen)
+    this.vSize = nalen // transport to caller
+    szs
   }
   
   // Takes the slot size model and copies across slots to match it. 
@@ -604,16 +607,16 @@ extends /*AbstractSeq[A]
 
   private def sliceR(right:Int):Vector[A]={
     if((right<vSize)&&(right>=0)&&(root!=null)){
-      val (n,hw)=rSliceDown2(root,right-1,vHw,false)
       val nv = new Vector[A]
+      val n=nv.rSliceDown2(root,right-1,vHw,false)
+      //nv.vHw=hw set by callee
       nv.vSize=right
       nv.root=n
-  	  nv.vHw=hw
       nv  
     } else this
   }
 
-  private def rSliceDown2(n:AnyRef,right:Int,hw:Int,hasLeft:Boolean):(AnyRef,Int)={
+  private def rSliceDown2(n:AnyRef,right:Int,hw:Int,hasLeft:Boolean): AnyRef = { // (AnyRef,Int) <-- second item transported via this.vHw
     // Works but can be simplified
     val sw=hw/Width
     var is=right/sw
@@ -622,16 +625,21 @@ extends /*AbstractSeq[A]
       val len=in.length-1
       if(in(0)==null){
         // Aligned vector
-        val (rhn:AnyRef,hwr:Int)=rSliceDown2(in(is+1),right-is*sw,hw/Width,(is!=0)||hasLeft)
+        val rhn=rSliceDown2(in(is+1),right-is*sw,hw/Width,(is!=0)||hasLeft)
+        val hwr = this.vHw
         if(is==0){
           if(hasLeft){
-            // has left above so return add level and return right node/height 
+            // has left above so return add level and return right node/height
             val rcnodes=new Array[AnyRef](2)
 		        //cost+=2
             rcnodes(1)=rhn
 		        rcnodes(0)=null
-            (rcnodes,hw)
-          } else (rhn,hwr) // nothing on left above so just return right node and height
+            this.vHw = hw
+            rcnodes
+          } else {
+            this.vHw = hwr
+            rhn // nothing on left above so just return right node and height
+          }
         } else {
           // Make copy of remaining left node
           val cnodes=new Array[AnyRef](is+2)
@@ -639,7 +647,8 @@ extends /*AbstractSeq[A]
           for(i<-0 until is)cnodes(i+1)=in(i+1)
           cnodes(is+1)=rhn
 	        cnodes(0)=null
-          (cnodes,hw)
+          this.vHw = hw
+          cnodes
         }
       } else {
         val szs=in(0).asInstanceOf[Array[Int]]
@@ -649,7 +658,8 @@ extends /*AbstractSeq[A]
         ix=ix-(if(is==0)0 else szs(is-1))
         val nn=in.asInstanceOf[Ara](is+1)
 
-        val (rhn,hwr)=rSliceDown2(nn,ix,hw/Width,(is!=0)||hasLeft)
+        val rhn = rSliceDown2(nn,ix,hw/Width,(is!=0)||hasLeft)
+        val hwr = this.vHw
         if(is==0){
           if(hasLeft){
             val rcnodes=new Array[AnyRef](2)
@@ -658,8 +668,12 @@ extends /*AbstractSeq[A]
             rcnodes(1)=rhn
             rsizes(0)=right+1 //++++
 		        rcnodes(0)=rsizes
-            (rcnodes,hw)
-          } else (rhn,hwr)  // nothing on left so return right node and height 
+            this.vHw = hw
+            rcnodes
+          } else {
+            this.vHw = hwr
+            rhn  // nothing on left so return right node and height
+          }
         } else { 
           val cnodes=new Array[AnyRef](is+2)
           val sizes=new Array[Int](is+1)
@@ -671,7 +685,8 @@ extends /*AbstractSeq[A]
 	        cnodes(0)=sizes
 	        sizes(is)=right+1
 	        cnodes(is+1)=rhn
-          (cnodes,hw) 		
+          this.vHw = hw
+          cnodes
         }
       }
     } else {
@@ -680,30 +695,31 @@ extends /*AbstractSeq[A]
       var lvals=new GTa(is+1)
       //cost+=is+1
       for(i<-0 to is)lvals(i)=vn(i).asInstanceOf[AnyRef]
-      (lvals,hw)
+      this.vHw = hw
+      lvals
     }
   }
 
   private def sliceL(left:Int):Vector[A]={
     if(left>=vSize)new Vector[A]
     else if((left>0)&&(root!=null)){
-      val (n,hw)=lSliceDown2(root,left,vHw,false)
       val nv = new Vector[A]
+      val n = nv.lSliceDown2(root,left,vHw,false)
+      //nv.vHw=hw done by callee
       nv.vSize=vSize-left
       nv.root=n
-  	  nv.vHw=hw
       nv  
     } else this
   }
 
   // hasRight flags there are more slots to the right of this one
-  private def lSliceDown2(n:AnyRef,left:Int,hw:Int,hasRight:Boolean):(AnyRef,Int)={
+  private def lSliceDown2(n:AnyRef,left:Int,hw:Int,hasRight:Boolean): AnyRef = { // (AnyRef,Int) <-- second item transported via this.vHw
     val sw=hw/Width
     var is=left/sw
     if (hw > Width) {
       val in = n.asInstanceOf[Ara]
       val len=in.length-1
-        val (inl,ist,ix)=if(in(0)!=null){
+        val (inl,ist,ix)=if(in(0)!=null){ // TODO
 	        // is a sized node so find index position
 	        val szs=in(0).asInstanceOf[Array[Int]]
           var ix=left
@@ -715,15 +731,20 @@ extends /*AbstractSeq[A]
         } else(in(is+1),is,left-is*sw) 
 
         val lastslt=len-1                    
-        val (lhn,hwr)=lSliceDown2(inl,ix,hw/Width,(ist!=lastslt)||hasRight)
-        if(ist==lastslt){ // no more slots to left 
+        val lhn=lSliceDown2(inl,ix,hw/Width,(ist!=lastslt)||hasRight)
+        val hwr = this.vHw
+        if(ist==lastslt){ // no more slots to left
           if(hasRight){
             val rcnodes=new Array[AnyRef](2)
 			        //cost+=2
             rcnodes(1)=lhn
 		        rcnodes(0)=null
-            (rcnodes,hw)
-          } else (lhn,hwr)  // nothing on left so return right node and height 
+            this.vHw = hw
+            rcnodes
+          } else {
+            this.vHw = hwr
+            lhn  // nothing on left so return right node and height
+          }
         } else {
 	        // has slots on left so copy them across
           val cnodes=new Array[AnyRef](len-ist+1)
@@ -736,8 +757,9 @@ extends /*AbstractSeq[A]
 		        rsizes(i)=sz-left
 		      }
 		      cnodes(0)=rsizes
-          cnodes(1)=lhn				
-          (cnodes,hw)
+          cnodes(1)=lhn
+          this.vHw = hw
+          cnodes
         }
     } else {
       val vn = n.asInstanceOf[GTa]
@@ -746,7 +768,8 @@ extends /*AbstractSeq[A]
       var lvals=new GTa(lenv-is)
       //cost+=lenv-is
       for(i<-is until lenv)lvals(i-is)=vn(i).asInstanceOf[AnyRef]
-      (lvals,hw)
+      this.vHw = hw
+      lvals
     }
   }
 
