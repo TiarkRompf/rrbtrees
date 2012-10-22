@@ -15,7 +15,7 @@ import scala.collection.mutable.Builder
 //  - replace math.max with java.lang.Math.max
 
 
-// componion object
+// companion object
 
 object Vector extends SeqFactory[Vector] {
   @inline implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Vector[A]] =
@@ -234,12 +234,12 @@ extends /*AbstractSeq[A]
 
   // IsTop
   private def concatSubTree(til:TreeNode,hwl:Int,tir:TreeNode,hwr:Int,isTop:Boolean): Ara = {
-    if(hwl>hwr) {
+    if (hwl > hwr) {
        // left vector higher than right
        val tnla=til.asInstanceOf[Ara]
        val tnca=concatSubTree(tnla(tnla.length-1),hwl/Width,tir,hwr,false)
        rebalance(tnla,tnca,null,hwl,isTop)     
-    } else if (hwl<hwr) {
+    } else if (hwl < hwr) {
        // right vector higher than left
        val tnra=tir.asInstanceOf[Ara]
        val tnca=concatSubTree(til,hwl,tnra(1),hwr/Width,false) 
@@ -446,7 +446,7 @@ extends /*AbstractSeq[A]
 
           var ga:GTa=null
           // collect enough slots together to match the size needed 
-          while((fillcnt<nsize)&&(nix<all.length)){
+          while ((fillcnt < nsize) && (nix < all.length)) {
             val gaa = all(nix).asInstanceOf[GTa]
             ga=if(fillcnt==0) new GTa(nsize) else ga
             val lena=gaa.length
@@ -484,17 +484,17 @@ extends /*AbstractSeq[A]
 
           var aa:Ara=null
           // collect enough slots together to match the size needed 
-          while((fillcnt<nsize)&&(nix<all.length)){
+          while ((fillcnt < nsize) && (nix < all.length)) {
             val aaa = all(nix).asInstanceOf[Ara]
             aa=if(fillcnt==0) new Ara(nsize+1) else aa
             val lena=aaa.length-1
             if(nsize-fillcnt>=lena-offs){
-              for(i<-0 until lena-offs)aa(i+fillcnt+1)=aaa(i+offs+1)
+              for(i<-0 until lena-offs) aa(i+fillcnt+1)=aaa(i+offs+1)
               nix+=1
               fillcnt+=lena-offs
               offs=0
             } else {
-              for(i<-0 until nsize-fillcnt)aa(i+fillcnt+1)=aaa(i+offs+1)
+              for(i<-0 until nsize-fillcnt) aa(i+fillcnt+1)=aaa(i+offs+1)
               offs+=nsize-fillcnt
               fillcnt=nsize
             }
@@ -780,12 +780,12 @@ extends /*AbstractSeq[A]
   
   // #### index implementation ####
   
-  final val S5=1<<5
-  final val S10=1<<10
-  final val S15=1<<15
-  final val S20=1<<20
-  final val S25=1<<25
-  final val S30=1<<30
+  final val S5=  1 << 5
+  final val S10= 1 << 10
+  final val S15= 1 << 15
+  final val S20= 1 << 20
+  final val S25= 1 << 25
+  final val S30= 1 << 30
 
    // Index method optimised for regular vectors
 
