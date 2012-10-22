@@ -719,16 +719,22 @@ extends /*AbstractSeq[A]
     if (hw > Width) {
       val in = n.asInstanceOf[Ara]
       val len=in.length-1
-        val (inl,ist,ix)=if(in(0)!=null){ // TODO
+        var inl = null: AnyRef
+        var ist = 0
+        var ix = 0
+        if(in(0)!=null){
 	        // is a sized node so find index position
 	        val szs=in(0).asInstanceOf[Array[Int]]
-          var ix=left
-          var it=is
-	        while(szs(it)<=ix)it+=1
-	        ix=ix-(if(it==0)0 else szs(it-1))
-          val nn=in.asInstanceOf[Ara](it+1)
-          (nn,it,ix) 
-        } else(in(is+1),is,left-is*sw) 
+          ix=left
+          ist=is
+	        while(szs(ist)<=ix)ist+=1
+	        ix=ix-(if(ist==0)0 else szs(ist-1))
+          inl=in.asInstanceOf[Ara](ist+1)
+        } else {
+          inl = in(is+1)
+          ist = is
+          ix = left-is*sw
+        }
 
         val lastslt=len-1                    
         val lhn=lSliceDown2(inl,ix,hw/Width,(ist!=lastslt)||hasRight)
