@@ -741,7 +741,7 @@ extends /*AbstractSeq[A]
   private def updateAt[B >: A](index:Int,value:B): Vector[B]={
     if((index<0)||(index>=vSize)||(root==null))this
     else {
-  	  val hw=sztohw(vSize)
+      //val hw=sztohw(vSize)
       val nvec=new Vector[B]
       nvec.root=updateTrie(root,index,value.asInstanceOf[AnyRef],vHw)
       nvec.vSize=vSize
@@ -760,7 +760,7 @@ extends /*AbstractSeq[A]
         val szs=in(0).asInstanceOf[Array[Int]]
         while(szs(is)<=ix)is+=1
         val nix=ix-(if(is==0)0 else szs(is-1))
-        updateTrie(in(is),nix,value,hw/Width)
+        updateTrie(in(1+is),nix,value,hw/Width)
       }
       val len=in.length-1    
       val cnodes=new Ara(len+1)
