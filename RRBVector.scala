@@ -58,11 +58,9 @@ final class VectorBuilder[A]() extends Builder[A,Vector[A]] {
     this
   }
 
-  override def ++=(xs: TraversableOnce[A]): this.type = {
-    xs match {
-      case v: Vector[A] => acc ++ v; this
-      case _ => super.++=(xs)
-    }
+  override def ++=(xs: TraversableOnce[A]): this.type = xs match {
+    case v: Vector[A] => acc = acc ++ v; this
+    case _ => super.++=(xs)
   }
 
   def result: Vector[A] = acc
